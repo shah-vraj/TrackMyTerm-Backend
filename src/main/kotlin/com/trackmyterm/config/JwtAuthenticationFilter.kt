@@ -45,8 +45,8 @@ class JwtAuthenticationFilter(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain
-    ): String? = request.getHeader("Authorization")?.let {
-        if (!it.startsWith("Bearer ")) {
+    ): String? = request.getHeader("Authorization").let {
+        if (it == null || !it.startsWith("Bearer ")) {
             filterChain.doFilter(request, response)
             return null
         }
