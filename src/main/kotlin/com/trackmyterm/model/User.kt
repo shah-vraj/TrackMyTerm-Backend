@@ -1,21 +1,15 @@
 package com.trackmyterm.model
 
-import lombok.AllArgsConstructor
-import lombok.Builder
-import lombok.NoArgsConstructor
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
 @Document(collection = "user")
 data class User (
     @Id
-    val id: String,
+    val id: String? = null,
 
     @Field(name = "username")
     val userName: String,
