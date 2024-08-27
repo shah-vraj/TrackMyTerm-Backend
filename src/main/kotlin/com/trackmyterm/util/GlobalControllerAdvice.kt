@@ -1,5 +1,6 @@
 package com.trackmyterm.util
 
+import com.trackmyterm.exception.InvalidPasswordException
 import com.trackmyterm.exception.UserAlreadyRegisteredException
 import com.trackmyterm.exception.UserNotFoundException
 import com.trackmyterm.util.ResponseBody.ResultType.FAILURE
@@ -55,6 +56,16 @@ class GlobalControllerAdvice {
         logger.error("User already registered: ${exception.message}")
         val response = ResponseBody(FAILURE, false, exception.message.orEmpty())
         return ResponseEntity(response, HttpStatus.CONFLICT)
+    }
+
+    @ExceptionHandler(InvalidPasswordException::class)
+    fun handleUserAlreadyRegisteredException(
+        exception: InvalidPasswordException,
+        request: WebRequest
+    ): ResponseEntity<ResponseBody<Boolean>> {
+        logger.error("User password does not match: ${exception.message}")
+        val response = ResponseBody(FAILURE, false, exception.message.orEmpty())
+        return ResponseEntity(response, HttpStatus.BAD_REQUEST)
     }
 
     @ExceptionHandler(Exception::class)
