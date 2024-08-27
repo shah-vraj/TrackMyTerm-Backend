@@ -3,7 +3,8 @@ package com.trackmyterm.util
 import com.trackmyterm.exception.InvalidPasswordException
 import com.trackmyterm.exception.UserAlreadyRegisteredException
 import com.trackmyterm.exception.UserNotFoundException
-import com.trackmyterm.util.ResponseBody.ResultType.FAILURE
+import com.trackmyterm.response.ErrorResponseBody
+import com.trackmyterm.util.Constants.GENERIC_API_ERROR_MESSAGE
 import jakarta.validation.ConstraintViolationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -21,20 +22,20 @@ class GlobalControllerAdvice {
     @ExceptionHandler(ConstraintViolationException::class)
     fun handleValidationExceptions(
         exception: ConstraintViolationException
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         val errors = exception.constraintViolations.map { it.message }.toString()
         logger.error("Constraint violation error: $errors")
-        val response = ResponseBody(FAILURE, false, errors)
+        val response = ErrorResponseBody.error(errors)
         return ResponseEntity(response, HttpStatus.BAD_REQUEST)
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleMethodArgumentNotValid(
         exception: MethodArgumentNotValidException
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         val errors = exception.bindingResult.fieldErrors.map { it.defaultMessage }.toString()
         logger.error("Method argument not valid error: $errors")
-        val response = ResponseBody(FAILURE, false, errors)
+        val response = ErrorResponseBody.error(errors)
         return ResponseEntity(response, HttpStatus.BAD_REQUEST)
     }
 
@@ -42,9 +43,9 @@ class GlobalControllerAdvice {
     fun handleUserNotFoundException(
         exception: UserNotFoundException,
         request: WebRequest
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         logger.error("User not found: ${exception.message}")
-        val response = ResponseBody(FAILURE, false, exception.message.orEmpty())
+        val response = ErrorResponseBody.error(exception.message.orEmpty())
         return ResponseEntity(response, HttpStatus.NOT_FOUND)
     }
 
@@ -52,9 +53,9 @@ class GlobalControllerAdvice {
     fun handleUserAlreadyRegisteredException(
         exception: UserAlreadyRegisteredException,
         request: WebRequest
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         logger.error("User already registered: ${exception.message}")
-        val response = ResponseBody(FAILURE, false, exception.message.orEmpty())
+        val response = ErrorResponseBody.error(exception.message.orEmpty())
         return ResponseEntity(response, HttpStatus.CONFLICT)
     }
 
@@ -62,9 +63,9 @@ class GlobalControllerAdvice {
     fun handleUserAlreadyRegisteredException(
         exception: InvalidPasswordException,
         request: WebRequest
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         logger.error("User password does not match: ${exception.message}")
-        val response = ResponseBody(FAILURE, false, exception.message.orEmpty())
+        val response = ErrorResponseBody.error(exception.message.orEmpty())
         return ResponseEntity(response, HttpStatus.BAD_REQUEST)
     }
 
@@ -72,9 +73,9 @@ class GlobalControllerAdvice {
     fun handleGlobalException(
         exception: Exception,
         request: WebRequest
-    ): ResponseEntity<ResponseBody<Boolean>> {
+    ): ResponseEntity<ErrorResponseBody> {
         logger.error("An error occurred: ${exception.message}")
-        val response = ResponseBody(FAILURE, false, "An unexpected error occurred.")
+        val response = ErrorResponseBody.error(GENERIC_API_ERROR_MESSAGE)
         return ResponseEntity(response, HttpStatus.INTERNAL_SERVER_ERROR)
     }
 }
