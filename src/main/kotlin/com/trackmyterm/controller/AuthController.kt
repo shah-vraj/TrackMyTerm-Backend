@@ -1,7 +1,9 @@
 package com.trackmyterm.controller
 
+import com.trackmyterm.request.ForgotPasswordRequest
 import com.trackmyterm.request.LoginRequest
 import com.trackmyterm.request.RegisterRequest
+import com.trackmyterm.response.ForgotPasswordResponse
 import com.trackmyterm.response.LoginResponse
 import com.trackmyterm.response.RegisterResponse
 import com.trackmyterm.service.AuthService
@@ -26,6 +28,14 @@ class AuthController(private val authService: AuthService) {
     @PostMapping("/login")
     fun loginUser(@Valid @RequestBody loginRequest: LoginRequest): ResponseEntity<LoginResponse> {
         val body = authService.loginUser(loginRequest)
+        return ResponseEntity(body, HttpStatus.OK)
+    }
+
+    @PostMapping("/forgot-password")
+    fun forgotPassword(
+        @Valid @RequestBody forgotPasswordRequest: ForgotPasswordRequest
+    ): ResponseEntity<ForgotPasswordResponse> {
+        val body = authService.forgotPassword(forgotPasswordRequest)
         return ResponseEntity(body, HttpStatus.OK)
     }
 }

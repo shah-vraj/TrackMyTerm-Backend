@@ -3,12 +3,17 @@ package com.trackmyterm.service
 import com.trackmyterm.exception.InvalidPasswordException
 import com.trackmyterm.exception.UserAlreadyRegisteredException
 import com.trackmyterm.exception.UserNotFoundException
+import com.trackmyterm.model.Otp
+import com.trackmyterm.repository.OtpRepository
 import com.trackmyterm.repository.UserRepository
+import com.trackmyterm.request.ForgotPasswordRequest
 import com.trackmyterm.request.LoginRequest
 import com.trackmyterm.request.RegisterRequest
+import com.trackmyterm.response.ForgotPasswordResponse
 import com.trackmyterm.response.LoginResponse
 import com.trackmyterm.response.LoginResponse.Data
 import com.trackmyterm.response.RegisterResponse
+import com.trackmyterm.util.EmailSender
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 
@@ -17,16 +22,23 @@ interface AuthService {
     /**
      * Register a user into the application
      * @param registerRequest Request model for registering the user
-     * @return True if user registration is successful, False otherwise
+     * @return RegisterResponse object
      */
     fun registerUser(registerRequest: RegisterRequest): RegisterResponse
 
     /**
      * Login the user into the application
      * @param loginRequest User details to login
-     * @return ResponseBody of LoginResponse containing token
+     * @return LoginResponse object
      */
     fun loginUser(loginRequest: LoginRequest): LoginResponse
+
+    /**
+     * Handles forgot password request and sends OTP to the requesting email address
+     * @param forgotPasswordRequest Request model containing email to make a password change request
+     * @return ForgotPasswordResponse object
+     */
+    fun forgotPassword(forgotPasswordRequest: ForgotPasswordRequest): ForgotPasswordResponse
 }
 
 @Service
@@ -34,6 +46,8 @@ class AuthServiceImpl(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
+    private val otpRepository: OtpRepository,
+    private val emailSender: EmailSender
 ) : AuthService {
 
     override fun registerUser(registerRequest: RegisterRequest): RegisterResponse {
@@ -53,5 +67,14 @@ class AuthServiceImpl(
 
         val token = jwtService.generateToken(user)
         return LoginResponse.success(Data(token))
+    }
+
+    override fun forgotPassword(forgotPasswordRequest: ForgotPasswordRequest): ForgotPasswordResponse {
+        otpRepository.findByEmail(forgotPasswordRequest.email)?.let(otpRepository::delete)
+        val otp = Otp.getOtpModel(forgotPasswordRequest.email)
+        otpRepository.save(otp).also {
+            emailSender.sendOtpToMail(it.otp, it.email)
+        }
+        return ForgotPasswordResponse.success()
     }
 }
