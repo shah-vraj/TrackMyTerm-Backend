@@ -70,8 +70,11 @@ class AuthServiceImpl(
     }
 
     override fun forgotPassword(forgotPasswordRequest: ForgotPasswordRequest): ForgotPasswordResponse {
-        otpRepository.findByEmail(forgotPasswordRequest.email)?.let(otpRepository::delete)
-        val otp = Otp.getOtpModel(forgotPasswordRequest.email)
+        val email = forgotPasswordRequest.email
+        if (!userRepository.existsByEmail(email))
+            throw UserNotFoundException(email)
+        otpRepository.findByEmail(email)?.let(otpRepository::delete)
+        val otp = Otp.getOtpModel(email)
         otpRepository.save(otp).also {
             emailSender.sendOtpToMail(it.otp, it.email)
         }
