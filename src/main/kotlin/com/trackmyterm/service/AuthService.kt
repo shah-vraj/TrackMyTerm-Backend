@@ -1,6 +1,7 @@
 package com.trackmyterm.service
 
 import com.trackmyterm.exception.InvalidPasswordException
+import com.trackmyterm.exception.OtpVerificationException
 import com.trackmyterm.exception.UserAlreadyRegisteredException
 import com.trackmyterm.exception.UserNotFoundException
 import com.trackmyterm.model.Otp
@@ -8,37 +9,47 @@ import com.trackmyterm.repository.OtpRepository
 import com.trackmyterm.repository.UserRepository
 import com.trackmyterm.request.ForgotPasswordRequest
 import com.trackmyterm.request.LoginRequest
+import com.trackmyterm.request.OtpVerificationRequest
 import com.trackmyterm.request.RegisterRequest
 import com.trackmyterm.response.ForgotPasswordResponse
 import com.trackmyterm.response.LoginResponse
 import com.trackmyterm.response.LoginResponse.Data
+import com.trackmyterm.response.OtpVerificationResponse
 import com.trackmyterm.response.RegisterResponse
 import com.trackmyterm.util.EmailSender
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 interface AuthService {
 
     /**
      * Register a user into the application
-     * @param registerRequest Request model for registering the user
-     * @return RegisterResponse object
+     * @param request Request model for registering the user
+     * @return [RegisterResponse] object
      */
-    fun registerUser(registerRequest: RegisterRequest): RegisterResponse
+    fun registerUser(request: RegisterRequest): RegisterResponse
 
     /**
      * Login the user into the application
-     * @param loginRequest User details to login
-     * @return LoginResponse object
+     * @param request User details to login
+     * @return [LoginResponse] object
      */
-    fun loginUser(loginRequest: LoginRequest): LoginResponse
+    fun loginUser(request: LoginRequest): LoginResponse
 
     /**
      * Handles forgot password request and sends OTP to the requesting email address
-     * @param forgotPasswordRequest Request model containing email to make a password change request
-     * @return ForgotPasswordResponse object
+     * @param request Request model containing email to make a password change request
+     * @return [ForgotPasswordResponse] object
      */
-    fun forgotPassword(forgotPasswordRequest: ForgotPasswordRequest): ForgotPasswordResponse
+    fun forgotPassword(request: ForgotPasswordRequest): ForgotPasswordResponse
+
+    /**
+     * Handles reset password request
+     * @param request Request model containing necessary details for resetting password
+     * @return [OtpVerificationResponse] object
+     */
+    fun verifyOtp(request: OtpVerificationRequest): OtpVerificationResponse
 }
 
 @Service
@@ -50,34 +61,49 @@ class AuthServiceImpl(
     private val emailSender: EmailSender
 ) : AuthService {
 
-    override fun registerUser(registerRequest: RegisterRequest): RegisterResponse {
-        if (userRepository.existsByEmail(registerRequest.email))
-            throw UserAlreadyRegisteredException(registerRequest.email)
+    override fun registerUser(request: RegisterRequest): RegisterResponse {
+        if (userRepository.existsByEmail(request.email))
+            throw UserAlreadyRegisteredException(request.email)
 
-        val user = registerRequest.toUser(passwordEncoder)
+        val user = request.toUser(passwordEncoder)
         userRepository.save(user)
         return RegisterResponse.success()
     }
 
-    override fun loginUser(loginRequest: LoginRequest): LoginResponse {
-        val user = userRepository.findByEmail(loginRequest.email)
-            ?: throw UserNotFoundException(loginRequest.email)
-        if (!passwordEncoder.matches(loginRequest.password, user.password))
-            throw InvalidPasswordException(loginRequest.email)
+    override fun loginUser(request: LoginRequest): LoginResponse {
+        val user = userRepository.findByEmail(request.email)
+            ?: throw UserNotFoundException(request.email)
+        if (!passwordEncoder.matches(request.password, user.password))
+            throw InvalidPasswordException(request.email)
 
         val token = jwtService.generateToken(user)
         return LoginResponse.success(Data(token))
     }
 
-    override fun forgotPassword(forgotPasswordRequest: ForgotPasswordRequest): ForgotPasswordResponse {
-        val email = forgotPasswordRequest.email
+    override fun forgotPassword(request: ForgotPasswordRequest): ForgotPasswordResponse {
+        val email = request.email
         if (!userRepository.existsByEmail(email))
             throw UserNotFoundException(email)
+
         otpRepository.findByEmail(email)?.let(otpRepository::delete)
         val otp = Otp.getOtpModel(email)
         otpRepository.save(otp).also {
             emailSender.sendOtpToMail(it.otp, it.email)
         }
         return ForgotPasswordResponse.success()
+    }
+
+    override fun verifyOtp(request: OtpVerificationRequest): OtpVerificationResponse {
+        val email = request.email
+        if (!userRepository.existsByEmail(email))
+            throw UserNotFoundException(email)
+
+        val otp = otpRepository.findByEmail(email) ?: throw OtpVerificationException.EmailNotFound(email)
+        when {
+            otp.expires.isBefore(LocalDateTime.now()) -> throw OtpVerificationException.OtpExpired(email)
+            otp.otp != request.otp -> throw OtpVerificationException.OtpNotMatching(email)
+        }
+        otpRepository.delete(otp)
+        return OtpVerificationResponse.success()
     }
 }
