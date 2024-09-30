@@ -2,9 +2,11 @@ package com.trackmyterm.controller
 
 import com.trackmyterm.request.ForgotPasswordRequest
 import com.trackmyterm.request.LoginRequest
+import com.trackmyterm.request.OtpVerificationRequest
 import com.trackmyterm.request.RegisterRequest
 import com.trackmyterm.response.ForgotPasswordResponse
 import com.trackmyterm.response.LoginResponse
+import com.trackmyterm.response.OtpVerificationResponse
 import com.trackmyterm.response.RegisterResponse
 import com.trackmyterm.service.AuthService
 import jakarta.validation.Valid
@@ -36,6 +38,14 @@ class AuthController(private val authService: AuthService) {
         @Valid @RequestBody forgotPasswordRequest: ForgotPasswordRequest
     ): ResponseEntity<ForgotPasswordResponse> {
         val body = authService.forgotPassword(forgotPasswordRequest)
+        return ResponseEntity(body, HttpStatus.OK)
+    }
+
+    @PostMapping("/verify-otp")
+    fun verifyOtp(
+        @Valid @RequestBody otpVerificationRequest: OtpVerificationRequest
+    ): ResponseEntity<OtpVerificationResponse> {
+        val body = authService.verifyOtp(otpVerificationRequest)
         return ResponseEntity(body, HttpStatus.OK)
     }
 }
