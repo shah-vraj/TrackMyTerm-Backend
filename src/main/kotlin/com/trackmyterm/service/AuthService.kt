@@ -11,11 +11,13 @@ import com.trackmyterm.request.ForgotPasswordRequest
 import com.trackmyterm.request.LoginRequest
 import com.trackmyterm.request.OtpVerificationRequest
 import com.trackmyterm.request.RegisterRequest
+import com.trackmyterm.request.ResetPasswordRequest
 import com.trackmyterm.response.ForgotPasswordResponse
 import com.trackmyterm.response.LoginResponse
 import com.trackmyterm.response.LoginResponse.Data
 import com.trackmyterm.response.OtpVerificationResponse
 import com.trackmyterm.response.RegisterResponse
+import com.trackmyterm.response.ResetPasswordResponse
 import com.trackmyterm.util.EmailSender
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -45,11 +47,18 @@ interface AuthService {
     fun forgotPassword(request: ForgotPasswordRequest): ForgotPasswordResponse
 
     /**
-     * Handles reset password request
-     * @param request Request model containing necessary details for resetting password
+     * Handles verifying otp request
+     * @param request Request model containing necessary details for verifying otp
      * @return [OtpVerificationResponse] object
      */
     fun verifyOtp(request: OtpVerificationRequest): OtpVerificationResponse
+
+    /**
+     * Handles reset password request
+     * @param request Request model containing necessary details for resetting password
+     * @return [ResetPasswordResponse] object
+     */
+    fun resetPassword(request: ResetPasswordRequest): ResetPasswordResponse
 }
 
 @Service
@@ -105,5 +114,14 @@ class AuthServiceImpl(
         }
         otpRepository.delete(otp)
         return OtpVerificationResponse.success()
+    }
+
+    override fun resetPassword(request: ResetPasswordRequest): ResetPasswordResponse {
+        val user = userRepository.findByEmail(request.email)
+            ?: throw UserNotFoundException(request.email)
+
+        val userWithUpdatedPassword = user.copy(userPassword = passwordEncoder.encode(request.password))
+        userRepository.save(userWithUpdatedPassword)
+        return ResetPasswordResponse.success()
     }
 }
